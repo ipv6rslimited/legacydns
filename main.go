@@ -21,16 +21,23 @@ import (
 )
 
 const sld = "visibleip.com."
+var   ips = []string{"::1", "127.0.0.1"}
 
 func main() {
-  dns.HandleFunc(".", handleDNSRequest)
-  server := &dns.Server{Addr: ":53", Net: "udp"}
-  log.Println("Starting DNS server on port 53")
-  err := server.ListenAndServe()
-  if err != nil {
-    log.Fatalf("Failed to start server: %s\n", err.Error())
+  for _, ip := range ips {
+    go startDNSServer(ip)
   }
-  defer server.Shutdown()
+
+  select {}
+}
+
+func startDNSServer(ip string) {
+  server := &dns.Server{Addr: net.JoinHostPort(ip, "53"), Net: "udp"}
+  dns.HandleFunc(".", handleDNSRequest)
+  log.Printf("Starting DNS server on %s:53\n", ip)
+  if err := server.ListenAndServe(); err != nil {
+    log.Fatalf("Failed to start server on %s: %v\n", ip, err)
+  }
 }
 
 func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
